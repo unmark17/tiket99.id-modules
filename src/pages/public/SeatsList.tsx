@@ -53,33 +53,30 @@ export default function SeatsList(){
   const location = useLocation()
   const params = new URLSearchParams(location.search)
 
-  // Query dari kartu pencarian (opsional semuanya)
   const qFrom = (params.get('from') || '').toUpperCase()
   const qTo   = (params.get('to')   || '').toUpperCase()
-  const qGo   = params.get('go') || ''                         // yyyy-mm-dd
+  const qGo   = params.get('go') || ''
   const qPax  = Number(params.get('pax') || '') || 0
-  const qCls  = (params.get('cls') || '').toLowerCase()        // Economy/Business
-  // const qTrip = params.get('trip') || 'oneway'               // kalau ingin dipakai nanti
+  const qCls  = (params.get('cls') || '').toLowerCase()
 
   const [status, setStatus] = useState<'OPEN'|'LIMITED'|'CLOSED'>('OPEN')
   const [rows, setRows] = useState<Seat[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Ambil data sesuai status (server-side)
   useEffect(() => {
     setLoading(true)
     getSeats({ status }).then(setRows).finally(() => setLoading(false))
   }, [status])
 
-  // Filter tambahan (client-side) berdasar query string
   const filtered = useMemo(() => {
     return rows.filter(s => {
-      const okFrom = qFrom ? (s.route_from || '').toUpperCase().includes(qFrom) : true
-      const okTo   = qTo   ? (s.route_to   || '').toUpperCase().includes(qTo)   : true
-      const okDate = qGo   ? new Date(s.depart_at).toISOString().slice(0,10) === qGo : true
-      const okCls  = qCls  ? (s.cabin_class || '').toLowerCase() === qCls : true
-      const okPax  = qPax  ? (s.seat_available || 0) >= qPax : true
-      return okFrom && okTo && okDate && okCls && okPax
+      const code = (s.code || '').toUpperCase()
+      const fromMatch = qFrom ? code.includes(qFrom) || s.route_from?.toUpperCase() === qFrom : true
+      const toMatch   = qTo   ? code.includes(qTo)   || s.route_to?.toUpperCase() === qTo   : true
+      const okDate = qGo ? new Date(s.depart_at).toISOString().slice(0,10) === qGo : true
+      const okCls  = qCls ? (s.cabin_class || '').toLowerCase() === qCls : true
+      const okPax  = qPax ? (s.seat_available || 0) >= qPax : true
+      return fromMatch && toMatch && okDate && okCls && okPax
     })
   }, [rows, qFrom, qTo, qGo, qCls, qPax])
 
@@ -92,9 +89,7 @@ export default function SeatsList(){
           <h1 className="text-2xl font-bold">Available Seat</h1>
           {hasFilter && (
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-              <span className="px-2 py-1 rounded-full border bg-white">
-                Status: <b>{status}</b>
-              </span>
+              <span className="px-2 py-1 rounded-full border bg-white">Status: <b>{status}</b></span>
               {qFrom && <span className="px-2 py-1 rounded-full border bg-white">From: <b>{qFrom}</b></span>}
               {qTo   && <span className="px-2 py-1 rounded-full border bg-white">To: <b>{qTo}</b></span>}
               {qGo   && <span className="px-2 py-1 rounded-full border bg-white">Date: <b>{qGo}</b></span>}
@@ -107,11 +102,8 @@ export default function SeatsList(){
 
         <div className="flex gap-2">
           {(['OPEN','LIMITED','CLOSED'] as const).map(s => (
-            <button
-              key={s}
-              onClick={() => setStatus(s)}
-              className={`px-3 py-1.5 rounded-xl border ${status === s ? 'bg-slate-900 text-white' : 'bg-white'}`}
-            >
+            <button key={s} onClick={() => setStatus(s)}
+              className={`px-3 py-1.5 rounded-xl border ${status === s ? 'bg-slate-900 text-white' : 'bg-white'}`}>
               {s}
             </button>
           ))}

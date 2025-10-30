@@ -2,3 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 html, body, #root { height: 100%; }
+
+select, input, button {
+  transition: all 0.2s ease-in-out;
+}
