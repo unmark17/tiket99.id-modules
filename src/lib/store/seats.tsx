@@ -52,6 +52,26 @@ export function SeatsProvider({ children }: { children: React.ReactNode }) {
     setSeats(DEMO)
   }
 
+function upsertMany(items: Seat[]) {
+  let create =0, update = 0
+  setSeats(prev => {
+    const map = new Map(prev.map(s => [s.id, s] as const))
+    for (const item of items) {
+      if (map.has(item.id)) {
+        map.set(item.id, item)
+        update++
+      } else {
+        map.set(item.id, item)
+        create++
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id))
+  })
+  return { create, update }
+}
+
+
   const value = useMemo(() => ({ seats, addSeat, updateSeat, deleteSeat, resetDemo }), [seats])
   return <SeatsCtx.Provider value={value}>{children}</SeatsCtx.Provider>
 }
