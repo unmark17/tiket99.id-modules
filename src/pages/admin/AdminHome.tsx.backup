@@ -1,6 +1,14 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { useSeats, Seat } from '@/lib/store/seats'
+
+type Seat = {
+  id: string
+  route: string
+  airline: string
+  date: string        // yyyy-mm-dd
+  available: number
+  price: number       // rupiah
+}
 
 type ModalState =
   | { open: false }
@@ -8,39 +16,37 @@ type ModalState =
   | { open: true; mode: 'edit'; initial: Seat }
 
 export default function AdminHome() {
-  const { seats, addSeat, updateSeat, deleteSeat, resetDemo } = useSeats()
+  const [seats, setSeats] = React.useState<Seat[]>([
+    { id: 'SEAT-001', route: 'SUB–JED', airline: 'Garuda (GA972)', date: '2025-12-10', available: 24, price: 12_500_000 },
+    { id: 'SEAT-002', route: 'CGK–MED', airline: 'Saudia (SV819)', date: '2025-12-03', available: 18, price: 11_250_000 },
+    { id: 'SEAT-003', route: 'SUB–JED', airline: 'Lion (JT96)',   date: '2025-12-15', available: 32, price: 9_750_000  },
+  ])
   const [modal, setModal] = React.useState<ModalState>({ open: false })
 
   const totalSeat = seats.reduce((a, b) => a + b.available, 0)
   const avgPrice = Math.round(seats.reduce((a, b) => a + b.price, 0) / (seats.length || 1))
 
   function handleCreate(payload: Omit<Seat, 'id'>) {
-    addSeat(payload)
+    const nextId = `SEAT-${(seats.length + 1).toString().padStart(3, '0')}`
+    setSeats(prev => [{ id: nextId, ...payload }, ...prev])
     setModal({ open: false })
   }
 
   function handleUpdate(updated: Seat) {
-    updateSeat(updated)
+    setSeats(prev => prev.map(s => (s.id === updated.id ? updated : s)))
     setModal({ open: false })
   }
 
   function handleDelete(id: string) {
-    const ok = window.confirm(`Hapus seat ${id}?`)
+    const ok = window.confirm(`Hapus seat ${id}? Tindakan ini tidak bisa dibatalkan.`)
     if (!ok) return
-    deleteSeat(id)
+    setSeats(prev => prev.filter(s => s.id !== id))
   }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
-          <p className="text-slate-600">Kelola available seat, approval booking, dan monitoring pembayaran.</p>
-        </div>
-        <button onClick={resetDemo} className="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">
-          Reset Demo
-        </button>
-      </div>
+      <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
+      <p className="text-slate-600">Kelola available seat, approval booking, dan monitoring pembayaran.</p>
 
       {/* Stat cards */}
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -49,7 +55,7 @@ export default function AdminHome() {
         <StatCard title="Avg Harga" value={`Rp ${avgPrice.toLocaleString('id-ID')}`} subtitle="Per rute" />
       </div>
 
-      {/* Tabel seat */}
+      {/* Manajemen seat */}
       <div className="mt-8 overflow-hidden rounded-xl border bg-white">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="font-semibold">Available Seat</div>
@@ -116,6 +122,7 @@ export default function AdminHome() {
         </div>
       </div>
 
+      {/* Modal */}
       {modal.open && (
         <SeatModal
           mode={modal.mode}
@@ -139,7 +146,9 @@ function StatCard({ title, value, subtitle }: { title: string; value: React.Reac
   )
 }
 
-import type { Seat as SeatType } from '@/lib/store/seats'
+/* ============================= */
+/* Modal Tambah/Edit Seat (sama) */
+/* ============================= */
 function SeatModal({
   mode,
   initial,
@@ -148,10 +157,10 @@ function SeatModal({
   onUpdate,
 }: {
   mode: 'create' | 'edit'
-  initial?: Partial<SeatType>
+  initial?: Partial<Seat>
   onClose: () => void
-  onCreate: (seat: Omit<SeatType, 'id'>) => void
-  onUpdate: (seat: SeatType) => void
+  onCreate: (seat: Omit<Seat, 'id'>) => void
+  onUpdate: (seat: Seat) => void
 }) {
   const isEdit = mode === 'edit'
   const [route, setRoute] = React.useState(initial?.route ?? 'SUB–JED')
@@ -164,69 +173,122 @@ function SeatModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!route.trim() || !airline.trim() || !date) return setError('Rute, Maskapai, dan Tanggal wajib diisi.')
-    if (!Number.isFinite(available) || available <= 0) return setError('Seat tersedia harus lebih dari 0.')
-    if (!Number.isFinite(price) || price <= 0) return setError('Harga harus lebih dari 0.')
+
+    if (!route.trim() || !airline.trim() || !date) {
+      setError('Rute, Maskapai, dan Tanggal wajib diisi.')
+      return
+    }
+    if (!Number.isFinite(available) || available <= 0) {
+      setError('Seat tersedia harus lebih dari 0.')
+      return
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      setError('Harga harus lebih dari 0.')
+      return
+    }
 
     if (isEdit && initial?.id) {
-      onUpdate({ id: initial.id!, route: route.trim(), airline: airline.trim(), date, available, price })
+      onUpdate({
+        id: initial.id,
+        route: route.trim(),
+        airline: airline.trim(),
+        date,
+        available,
+        price,
+      })
     } else {
-      onCreate({ route: route.trim(), airline: airline.trim(), date, available, price })
+      onCreate({
+        route: route.trim(),
+        airline: airline.trim(),
+        date,
+        available,
+        price,
+      })
     }
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      {/* backdrop */}
       <div className="absolute inset-0 bg-slate-900/50" onClick={onClose} />
-      <form onSubmit={handleSubmit} className="relative w-full max-w-lg rounded-2xl border bg-white p-5 shadow-xl">
+
+      {/* modal */}
+      <form
+        onSubmit={handleSubmit}
+        className="relative w-full max-w-lg rounded-2xl border bg-white p-5 shadow-xl"
+      >
         <div className="mb-3 flex items-center justify-between">
           <div className="text-lg font-semibold">{isEdit ? 'Edit Seat' : 'Tambah Seat'}</div>
-          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">✕</button>
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">
+            ✕
+          </button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Rute">
-            <input value={route} onChange={(e) => setRoute(e.target.value)} placeholder="mis. SUB–JED"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500" />
-          </Field>
-          <Field label="Maskapai">
-            <input value={airline} onChange={(e) => setAirline(e.target.value)} placeholder="mis. Garuda (GA972)"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500" />
-          </Field>
-          <Field label="Tanggal">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500" />
-          </Field>
-          <Field label="Seat Tersedia">
-            <input type="number" min={1} value={Number.isFinite(available) ? available : 0}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Rute</label>
+            <input
+              value={route}
+              onChange={(e) => setRoute(e.target.value)}
+              placeholder="mis. SUB–JED"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Maskapai</label>
+            <input
+              value={airline}
+              onChange={(e) => setAirline(e.target.value)}
+              placeholder="mis. Garuda (GA972)"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Tanggal</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Seat Tersedia</label>
+            <input
+              type="number"
+              min={1}
+              value={Number.isFinite(available) ? available : 0}
               onChange={(e) => setAvailable(parseInt(e.target.value || '0', 10))}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500" />
-          </Field>
-          <Field label="Harga (Rp)" span2>
-            <input type="number" min={1} value={Number.isFinite(price) ? price : 0}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-slate-700">Harga (Rp)</label>
+            <input
+              type="number"
+              min={1}
+              value={Number.isFinite(price) ? price : 0}
               onChange={(e) => setPrice(parseInt(e.target.value || '0', 10))}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500" />
-          </Field>
+              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
-        {error && <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50">Batal</button>
+          <button type="button" onClick={onClose} className="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50">
+            Batal
+          </button>
           <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
             {isEdit ? 'Simpan Perubahan' : 'Simpan'}
           </button>
         </div>
       </form>
-    </div>
-  )
-}
-
-function Field({ label, children, span2 }: { label: string; children: React.ReactNode; span2?: boolean }) {
-  return (
-    <div className={span2 ? 'md:col-span-2' : ''}>
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
-      {children}
     </div>
   )
 }
