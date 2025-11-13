@@ -44,15 +44,10 @@ export default function FlightSearchCard(){
     return trip === 'oneway' ? [...holy, ...citiesID] : holy
   }, [trip])
 
-  // ——— Pastikan value selalu valid saat trip berubah
+  // ——— Pastikan value valid saat trip berubah
   useEffect(() => {
-    if (!fromOptions.find(o => o.code === from)) {
-      setFrom(fromOptions[0]?.code || '')
-    }
-    if (!toOptions.find(o => o.code === to)) {
-      setTo(toOptions[0]?.code || '')
-    }
-    // tutup dropdown ketika mode berubah
+    if (!fromOptions.find(o => o.code === from)) setFrom(fromOptions[0]?.code || '')
+    if (!toOptions.find(o => o.code === to)) setTo(toOptions[0]?.code || '')
     setOpenFrom(false); setOpenTo(false)
   }, [trip]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -69,12 +64,23 @@ export default function FlightSearchCard(){
     setTo(a)
   }
 
+  /** 🔧 PENTING: arahkan ke /search dan samakan nama query
+   *  SearchResults membaca: from, to, depart, trip, pax, class
+   *  trip: 'PP' | 'ONE_WAY'
+   */
   function submit(e: React.FormEvent){
     e.preventDefault()
+    const tripNorm = trip === 'roundtrip' ? 'PP' : 'ONE_WAY'
     const q = new URLSearchParams({
-      from, to, go, pax: String(pax), cls, trip
+      from,
+      to,
+      depart: go,
+      trip: tripNorm,
+      pax: String(pax),
+      class: cls,
+      ...(trip === 'roundtrip' ? { return: back } : {}),
     }).toString()
-    nav(`/seats?${q}`)
+    nav(`/search?${q}`)
   }
 
   const labelFrom = fromOptions.find(o=>o.code===from)?.name || from
@@ -114,7 +120,7 @@ export default function FlightSearchCard(){
             <span className="text-xs text-slate-500">Pesawat · Umroh</span>
           </div>
 
-          {/* Grid form — kolom swap di tengah + Penumpang/Kelas */}
+          {/* Grid form */}
           <div className="grid gap-4 items-end md:grid-cols-[1fr_auto_1fr_1fr_1fr_1fr]">
             {/* D A R I */}
             <div className="relative">

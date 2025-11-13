@@ -9,11 +9,13 @@ import AgentHome from '@/pages/agent/AgentHome'
 import BookingDetail from '@/pages/agent/BookingDetail'
 import AdminHome from '@/pages/admin/AdminHome'
 import { RequireAuth } from '@/lib/store/auth' // kalau belum ada, abaikan import ini
+import SearchResults from '@/pages/public/SearchResults'
 
 const routes = [
   // Publik
   { path: '/', element: <Shell><Home /></Shell> },
   { path: '/seats', element: <Shell><SeatsList /></Shell> },
+  { path: '/seats', element: <Shell><SearchResults /></Shell> },
   { path: '/seats/:id', element: <Shell><SeatDetail /></Shell> },
   { path: '/login', element: <Shell><Login /></Shell> },
   { path: '/register', element: <Shell><Register /></Shell> },
