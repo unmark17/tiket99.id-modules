@@ -64,24 +64,17 @@ export default function FlightSearchCard(){
     setTo(a)
   }
 
-  /** 🔧 PENTING: arahkan ke /search dan samakan nama query
-   *  SearchResults membaca: from, to, depart, trip, pax, class
-   *  trip: 'PP' | 'ONE_WAY'
-   */
-  function submit(e: React.FormEvent){
-    e.preventDefault()
-    const tripNorm = trip === 'roundtrip' ? 'PP' : 'ONE_WAY'
-    const q = new URLSearchParams({
-      from,
-      to,
-      depart: go,
-      trip: tripNorm,
-      pax: String(pax),
-      class: cls,
-      ...(trip === 'roundtrip' ? { return: back } : {}),
-    }).toString()
-    nav(`/search?${q}`)
-  }
+  function submit(e: React.FormEvent) {
+  e.preventDefault()
+  const tripNorm = trip === 'roundtrip' ? 'PP' : 'ONE_WAY'
+  const q = new URLSearchParams({
+    from,
+    to,
+    depart: go,
+    trip: tripNorm,
+  })
+  nav(`/search?${q.toString()}`)
+}
 
   const labelFrom = fromOptions.find(o=>o.code===from)?.name || from
   const labelTo   = toOptions.find(o=>o.code===to)?.name   || to
